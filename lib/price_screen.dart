@@ -1,17 +1,40 @@
+import 'package:bitcoin_ticker/network.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'coin_data.dart';
+import 'dart:io' show Platform;
+
+const apiKey = 'B49135DF-CED0-4E2E-AEA7-09A189DEAC2D';
+const coinapiURL = 'https://rest.coinapi.io/v1/exchangerate/BTC/USD';
+
+
+class ExchangeModel {
+  Future<dynamic> getExchangeRate() async {
+    NetworkHelper networkHelper = NetworkHelper('$coinapiURL?apiKey=$apiKey');
+
+    var exchangeData = await networkHelper.getData();
+    return exchangeData['rate'];
+  }
+}
+
 
 class PriceScreen extends StatefulWidget {
+  PriceScreen({this.currentRate});
+
+  final currentRate;
+
   @override
   _PriceScreenState createState() => _PriceScreenState();
 }
 
 class _PriceScreenState extends State<PriceScreen> {
 
+  ExchangeModel exchange = ExchangeModel();
+
   String selectedCurrency = 'USD';
 
-  List<DropdownMenuItem> getDropDownItems() {
+  //Method to get android drop down menu
+  DropdownButton<String> androidDropDown() {
 
     List<DropdownMenuItem<String>> dropDownItems = [];
 
@@ -24,19 +47,51 @@ class _PriceScreenState extends State<PriceScreen> {
       dropDownItems.add(newItem);
     }
 
-    return dropDownItems;
+    return DropdownButton<String>(
+      value: selectedCurrency,
+      items: dropDownItems,
+      onChanged: (value) {
+        setState(() {
+          selectedCurrency = value;
+        });
+      },
+    );
   }
 
-  List<Text> getPickerItems() {
+  //Method to get iOS picker items
+  CupertinoPicker iOSPicker() {
 
     List<Text> pickerItems = [];
 
-    for(String currency in currenciesList) {
-
+    for (String currency in currenciesList) {
       pickerItems.add(Text(currency));
     }
 
-    return pickerItems;
+    return CupertinoPicker(
+      backgroundColor: Colors.lightBlue,
+      itemExtent: 32.0,
+      onSelectedItemChanged: (selectedIndex) {},
+      children: pickerItems,
+    );
+  }
+
+  var rate;
+
+  @override
+  void initState() {
+    super.initState();
+
+    updateUI(widget.currentRate);
+  }
+
+  void updateUI(dynamic exchangeData) {
+    setState(() {
+      if (exchangeData == null) {
+        rate = 'Error';
+        return;
+      }
+      rate = exchangeData['rate'];
+    });
   }
 
   @override
@@ -60,7 +115,7 @@ class _PriceScreenState extends State<PriceScreen> {
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
                 child: Text(
-                  '1 BTC = ? USD',
+                  '1 BTC = $rate USD',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 20.0,
@@ -75,29 +130,10 @@ class _PriceScreenState extends State<PriceScreen> {
             alignment: Alignment.center,
             padding: EdgeInsets.only(bottom: 30.0),
             color: Colors.lightBlue,
-            child: CupertinoPicker(
-              backgroundColor: Colors.lightBlue,
-              itemExtent: 32.0,
-              onSelectedItemChanged: (selectedIndex){
-
-              },
-              children: getPickerItems(),
-            ),
+            child: Platform.isIOS ? iOSPicker() : androidDropDown(),
           ),
         ],
       ),
     );
   }
 }
-
-
-
-//DropdownButton<String>(
-//value: selectedCurrency,
-//items: getDropDownItems(),
-//onChanged: (value) {
-//setState(() {
-//selectedCurrency = value;
-//});
-//},
-//)
